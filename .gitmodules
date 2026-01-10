@@ -1,0 +1,3 @@
+[submodule "app/src/main/res/web-admin"]
+	path = app/src/main/res/web-admin
+	url = https://github.com/zahid210/web-admin.git
