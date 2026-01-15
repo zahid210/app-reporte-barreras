@@ -65,6 +65,7 @@ object Screen2 {
 fun Screen2UI(
     userEmail: String,
     onLogout: () -> Unit,
+    onGoToHistory: () -> Unit,
     modifier: Modifier = Modifier,
     vm: Screen2ViewModel = viewModel(),
 ) {
@@ -199,7 +200,7 @@ fun Screen2UI(
                 // BOTÓN DE REPORTES (Usando AutoMirrored para compatibilidad total)
                 IconButton(onClick = {
                     // Lógica para abrir la pantalla de reportes en tiempo real
-                    println("Consultando reportes para $userEmail")
+                    onGoToHistory()
                 }) {
                     Icon(
                         imageVector = Icons.AutoMirrored.Filled.List,

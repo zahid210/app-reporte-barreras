@@ -8,9 +8,9 @@ import androidx.compose.animation.togetherWith
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.material3.MaterialTheme
 import androidx.compose.runtime.*
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.graphics.Color
 import androidx.navigation.NavHostController
 import androidx.navigation.NavType
 import androidx.navigation.compose.NavHost
@@ -21,6 +21,8 @@ import com.example.reportebarreras.ui.Screen1
 import com.example.reportebarreras.ui.Screen1UI
 import com.example.reportebarreras.ui.Screen2
 import com.example.reportebarreras.ui.Screen2UI
+import com.example.reportebarreras.ui.Screen3
+import com.example.reportebarreras.ui.Screen3UI
 
 @Composable
 fun AppNavigation(navController: NavHostController) {
@@ -46,18 +48,18 @@ fun AppNavigation(navController: NavHostController) {
         label = "SplashToMainTransition"
     ) { loading ->
         if (loading) {
-            // Ponemos el fondo del mismo color que tu Splash del sistema
-            // Esto evita el "flashazo" blanco/negro si Supabase tarda
+            // ACTUALIZADO: Usamos el color del tema para evitar flashazos en Modo Oscuro
             Box(
                 modifier = Modifier
                     .fillMaxSize()
-                    .background(Color(0xFFE6E7E8))
+                    .background(MaterialTheme.colorScheme.background)
             )
         } else {
             NavHost(
                 navController = navController,
                 startDestination = startDestination
             ) {
+                // --- PANTALLA 1: LOGIN ---
                 composable(Screen1.ROUTE) {
                     Screen1UI(
                         onGoToScreen2 = { email ->
@@ -68,17 +70,38 @@ fun AppNavigation(navController: NavHostController) {
                     )
                 }
 
+                // --- PANTALLA 2: PRINCIPAL (Reportar) ---
                 composable(
                     route = Screen2.ROUTE,
                     arguments = listOf(navArgument("email") { type = NavType.StringType })
                 ) { backStackEntry ->
                     val email = backStackEntry.arguments?.getString("email") ?: ""
+
                     Screen2UI(
                         userEmail = email,
                         onLogout = {
                             navController.navigate(Screen1.ROUTE) {
                                 popUpTo(0)
                             }
+                        },
+                        // NUEVO: Navegación hacia el historial de reportes
+                        onGoToHistory = {
+                            navController.navigate(Screen3.createRoute(email))
+                        }
+                    )
+                }
+
+                // --- PANTALLA 3: HISTORIAL DE REPORTES ---
+                composable(
+                    route = Screen3.ROUTE,
+                    arguments = listOf(navArgument("email") { type = NavType.StringType })
+                ) { backStackEntry ->
+                    val email = backStackEntry.arguments?.getString("email") ?: ""
+
+                    Screen3UI(
+                        userEmail = email,
+                        onBack = {
+                            navController.popBackStack()
                         }
                     )
                 }

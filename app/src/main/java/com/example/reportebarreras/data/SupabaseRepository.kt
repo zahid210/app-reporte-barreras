@@ -2,7 +2,9 @@ package com.example.reportebarreras.data
 
 import io.github.jan.supabase.auth.auth
 import io.github.jan.supabase.auth.providers.builtin.Email
+import io.github.jan.supabase.postgrest.from
 import io.github.jan.supabase.postgrest.postgrest
+import io.github.jan.supabase.postgrest.query.Order
 import io.github.jan.supabase.storage.storage
 
 object SupabaseRepository {
@@ -12,10 +14,9 @@ object SupabaseRepository {
 
     // --- AGREGAR ESTO ---
 
-    // 1. Intentar recuperar la sesión (espera a que Supabase lea el disco)
+    // Intentar recuperar la sesión (espera a que Supabase lea el disco)
     suspend fun retrieveUserSession(): String? {
         return try {
-            // Esto fuerza a la librería a verificar si hay token guardado
             client.auth.awaitInitialization()
             val user = client.auth.currentUserOrNull()
             user?.email
@@ -24,7 +25,7 @@ object SupabaseRepository {
         }
     }
 
-    // 2. Cerrar Sesión
+    // Cerrar Sesión
     suspend fun logout() {
         try {
             client.auth.signOut()
@@ -40,7 +41,7 @@ object SupabaseRepository {
                 this.email = email.trim()
                 this.password = password.trim()
             }
-            true // Si no lanza excepción, el login fue exitoso
+            true
         } catch (e: Exception) {
             println("ERROR LOGIN AUTH: ${e.message}")
             false
@@ -61,7 +62,7 @@ object SupabaseRepository {
         }
     }
 
-    // OBTENER EMAIL DEL USUARIO ACTUAL (Para pasar a Screen2)
+    // OBTENER EMAIL DEL USUARIO ACTUAL
     fun getCurrentUserEmail(): String? {
         return client.auth.currentSessionOrNull()?.user?.email
     }
@@ -74,14 +75,13 @@ object SupabaseRepository {
             // Subir la imagen
             bucket.upload(path = fileName, data = bytes)
 
-            // ✅ USAR EL METODO OFICIAL PARA OBTENER LA URL PÚBLICA
             val publicUrl = bucket.publicUrl(fileName)
 
             println("DEBUG: URL generada correctamente: $publicUrl")
             publicUrl
         } catch (e: Exception) {
             println("ERROR UPLOAD STORAGE: ${e.message}")
-            "" // Si devuelve vacío, el insert fallará o irá vacío
+            ""
         }
     }
 
@@ -114,5 +114,14 @@ object SupabaseRepository {
         } catch (e: Exception) {
             println("ERROR SAVE REPORTE: ${e.message}")
         }
+    }
+    suspend fun getReportesByUser(email: String): List<Reporte> {
+        return client.from("reportes")
+            .select {
+                filter {
+                    eq("user_email", email)
+                }
+                order("created_at", order = Order.DESCENDING)
+            }.decodeList<Reporte>()
     }
 }
