@@ -31,6 +31,7 @@ import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ExitToApp
+import androidx.compose.material.icons.automirrored.filled.List
 import androidx.compose.material.icons.filled.Mic
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
@@ -173,13 +174,20 @@ fun Screen2UI(
             verticalArrangement = Arrangement.spacedBy(12.dp)
         ) {
             // HEADER
+            // ---------- HEADER ----------
             Row(
-                modifier = Modifier.fillMaxWidth().padding(top = 8.dp),
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(top = 8.dp),
                 horizontalArrangement = Arrangement.SpaceBetween,
                 verticalAlignment = Alignment.CenterVertically
             ) {
-                Column {
-                    Text("Hola,", fontSize = 14.sp, color = MaterialTheme.colorScheme.onBackground.copy(alpha = 0.6f))
+                Column(modifier = Modifier.weight(1f)) {
+                    Text(
+                        "Hola,",
+                        fontSize = 14.sp,
+                        color = MaterialTheme.colorScheme.onBackground.copy(alpha = 0.6f)
+                    )
                     Text(
                         text = userEmail.substringBefore("@"),
                         fontSize = 18.sp,
@@ -187,6 +195,20 @@ fun Screen2UI(
                         color = MaterialTheme.colorScheme.onBackground
                     )
                 }
+
+                // BOTÓN DE REPORTES (Usando AutoMirrored para compatibilidad total)
+                IconButton(onClick = {
+                    // Lógica para abrir la pantalla de reportes en tiempo real
+                    println("Consultando reportes para $userEmail")
+                }) {
+                    Icon(
+                        imageVector = Icons.AutoMirrored.Filled.List,
+                        contentDescription = "Ver mis reportes",
+                        tint = MaterialTheme.colorScheme.primary
+                    )
+                }
+
+                // BOTÓN DE LOGOUT
                 IconButton(onClick = {
                     scope.launch {
                         vm.isUploading = true
@@ -196,7 +218,7 @@ fun Screen2UI(
                 }) {
                     Icon(
                         imageVector = Icons.AutoMirrored.Filled.ExitToApp,
-                        contentDescription = "Logout",
+                        contentDescription = "Cerrar Sesión",
                         tint = MaterialTheme.colorScheme.primary
                     )
                 }
@@ -304,7 +326,7 @@ fun Screen2UI(
                 IconButton(
                     onClick = {
                         focusManager.clearFocus()
-                        // vibrateShort(context) // Solo si tienes la función
+                        vibrateShort(context) // Solo si tienes la función
                         startVoiceInput()
                     },
                     enabled = vm.audioPermissionGranted
