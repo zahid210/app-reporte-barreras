@@ -10,6 +10,8 @@ import androidx.core.splashscreen.SplashScreen.Companion.installSplashScreen
 import androidx.navigation.compose.rememberNavController
 import com.example.reportebarreras.navigation.AppNavigation
 import android.view.animation.AlphaAnimation
+import com.example.reportebarreras.ui.theme.ReporteBarrerasTheme
+
 class MainActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         // 1. Usamos la versión de la librería (androidx.core.splashscreen)
@@ -51,7 +53,7 @@ class MainActivity : ComponentActivity() {
         )
 
         setContent {
-            MaterialTheme {
+            ReporteBarrerasTheme {
                 val navController = rememberNavController()
                 AppNavigation(navController)
             }

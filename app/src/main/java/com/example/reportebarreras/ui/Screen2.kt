@@ -75,44 +75,34 @@ fun Screen2UI(
         ImageCapture.Builder().setCaptureMode(ImageCapture.CAPTURE_MODE_MINIMIZE_LATENCY).build()
     }
 
-    // Animación para el micro
-    val alpha by rememberInfiniteTransition(label = "").animateFloat(
+    val alpha by rememberInfiniteTransition(label = "mic_alpha").animateFloat(
         initialValue = 0.3f, targetValue = 1f,
         animationSpec = infiniteRepeatable(tween(700, easing = LinearEasing), RepeatMode.Reverse),
-        label = ""
+        label = "mic_alpha_anim"
     )
 
-    // --- LÓGICA DE PERMISOS Y GPS ---
-    val gpsSettingsLauncher =
-        rememberLauncherForActivityResult(ActivityResultContracts.StartActivityForResult()) {
-            val lm = context.getSystemService(Context.LOCATION_SERVICE) as LocationManager
-            vm.gpsEnabled = lm.isProviderEnabled(LocationManager.GPS_PROVIDER)
-        }
-
-    val permissionsLauncher =
-        rememberLauncherForActivityResult(ActivityResultContracts.RequestMultiplePermissions()) { p ->
-            vm.locationPermissionGranted = p[Manifest.permission.ACCESS_FINE_LOCATION] == true
-            vm.cameraPermissionGranted = p[Manifest.permission.CAMERA] == true
-            vm.audioPermissionGranted = p[Manifest.permission.RECORD_AUDIO] == true
-
-            if (vm.locationPermissionGranted) {
-                val lm = context.getSystemService(Context.LOCATION_SERVICE) as LocationManager
-                vm.gpsEnabled = lm.isProviderEnabled(LocationManager.GPS_PROVIDER)
-                if (!vm.gpsEnabled) gpsSettingsLauncher.launch(Intent(Settings.ACTION_LOCATION_SOURCE_SETTINGS))
-            }
-        }
-
-    LaunchedEffect(Unit) {
-        permissionsLauncher.launch(
-            arrayOf(
-                Manifest.permission.ACCESS_FINE_LOCATION,
-                Manifest.permission.CAMERA,
-                Manifest.permission.RECORD_AUDIO
-            )
-        )
+    // --- LÓGICA DE PERMISOS ---
+    val gpsSettingsLauncher = rememberLauncherForActivityResult(ActivityResultContracts.StartActivityForResult()) {
+        val lm = context.getSystemService(Context.LOCATION_SERVICE) as LocationManager
+        vm.gpsEnabled = lm.isProviderEnabled(LocationManager.GPS_PROVIDER)
     }
 
-    // Actualizaciones de ubicación
+    val permissionsLauncher = rememberLauncherForActivityResult(ActivityResultContracts.RequestMultiplePermissions()) { p ->
+        vm.locationPermissionGranted = p[Manifest.permission.ACCESS_FINE_LOCATION] == true
+        vm.cameraPermissionGranted = p[Manifest.permission.CAMERA] == true
+        vm.audioPermissionGranted = p[Manifest.permission.RECORD_AUDIO] == true
+
+        if (vm.locationPermissionGranted) {
+            val lm = context.getSystemService(Context.LOCATION_SERVICE) as LocationManager
+            vm.gpsEnabled = lm.isProviderEnabled(LocationManager.GPS_PROVIDER)
+            if (!vm.gpsEnabled) gpsSettingsLauncher.launch(Intent(Settings.ACTION_LOCATION_SOURCE_SETTINGS))
+        }
+    }
+
+    LaunchedEffect(Unit) {
+        permissionsLauncher.launch(arrayOf(Manifest.permission.ACCESS_FINE_LOCATION, Manifest.permission.CAMERA, Manifest.permission.RECORD_AUDIO))
+    }
+
     DisposableEffect(context) {
         val receiver = object : BroadcastReceiver() {
             override fun onReceive(c: Context?, i: Intent?) {
@@ -124,53 +114,28 @@ fun Screen2UI(
         onDispose { context.unregisterReceiver(receiver) }
     }
 
-    // --- LÓGICA DE ACTUALIZACIÓN DE UBICACIÓN (CORREGIDA) ---
     LaunchedEffect(vm.locationPermissionGranted, vm.gpsEnabled) {
         if (vm.locationPermissionGranted && vm.gpsEnabled) {
-
-            // VERIFICACIÓN EXPLÍCITA DE PERMISOS (Para evitar el error de compilación)
-            if (ContextCompat.checkSelfPermission(
-                    context,
-                    Manifest.permission.ACCESS_FINE_LOCATION
-                ) == PackageManager.PERMISSION_GRANTED
-            ) {
-                val request =
-                    LocationRequest.Builder(Priority.PRIORITY_HIGH_ACCURACY, 1500L).build()
-
+            if (ContextCompat.checkSelfPermission(context, Manifest.permission.ACCESS_FINE_LOCATION) == PackageManager.PERMISSION_GRANTED) {
+                val request = LocationRequest.Builder(Priority.PRIORITY_HIGH_ACCURACY, 1500L).build()
                 val callback = object : LocationCallback() {
-                    override fun onLocationResult(res: LocationResult) {
-                        vm.currentLocation = res.lastLocation
-                    }
+                    override fun onLocationResult(res: LocationResult) { vm.currentLocation = res.lastLocation }
                 }
-
                 try {
-                    fusedLocationClient.requestLocationUpdates(
-                        request,
-                        callback,
-                        context.mainLooper
-                    )
-                } catch (e: SecurityException) {
-                    e.printStackTrace()
-                }
+                    fusedLocationClient.requestLocationUpdates(request, callback, context.mainLooper)
+                } catch (e: SecurityException) { e.printStackTrace() }
             }
         }
     }
 
-    // --- FUNCIONES INTERNAS (VOICE / FOTO) ---
     fun startVoiceInput() {
         val intent = Intent(RecognizerIntent.ACTION_RECOGNIZE_SPEECH).apply {
-            putExtra(
-                RecognizerIntent.EXTRA_LANGUAGE_MODEL,
-                RecognizerIntent.LANGUAGE_MODEL_FREE_FORM
-            )
+            putExtra(RecognizerIntent.EXTRA_LANGUAGE_MODEL, RecognizerIntent.LANGUAGE_MODEL_FREE_FORM)
             putExtra(RecognizerIntent.EXTRA_LANGUAGE, "es-ES")
         }
         val recognizer = SpeechRecognizer.createSpeechRecognizer(context)
         recognizer.setRecognitionListener(object : RecognitionListener {
-            override fun onReadyForSpeech(p0: Bundle?) {
-                vm.isListening = true
-            }
-
+            override fun onReadyForSpeech(p0: Bundle?) { vm.isListening = true }
             override fun onResults(res: Bundle?) {
                 res?.getStringArrayList(SpeechRecognizer.RESULTS_RECOGNITION)?.firstOrNull()?.let {
                     vm.descripcion = if (vm.descripcion.isBlank()) it else "${vm.descripcion}\n$it"
@@ -178,11 +143,7 @@ fun Screen2UI(
                 vm.isListening = false
                 recognizer.destroy()
             }
-
-            override fun onError(p0: Int) {
-                vm.isListening = false; recognizer.destroy()
-            }
-
+            override fun onError(p0: Int) { vm.isListening = false; recognizer.destroy() }
             override fun onBeginningOfSpeech() {}
             override fun onRmsChanged(p0: Float) {}
             override fun onBufferReceived(p0: ByteArray?) {}
@@ -193,21 +154,17 @@ fun Screen2UI(
         recognizer.startListening(intent)
     }
 
-    // --- UI RESPONSIVA ---
+    // --- UI ---
     Column(
         modifier = modifier
             .fillMaxSize()
-            .background(Color(0xFFF2F2F2))
+            .background(MaterialTheme.colorScheme.background)
             .statusBarsPadding()
             .imePadding()
             .padding(horizontal = 24.dp)
             .padding(top = 24.dp, bottom = 12.dp)
-            .clickable(
-                indication = null,
-                interactionSource = remember { MutableInteractionSource() }
-            ) { focusManager.clearFocus() }
+            .clickable(indication = null, interactionSource = remember { MutableInteractionSource() }) { focusManager.clearFocus() }
     ) {
-        // ZONA DE CONTENIDO
         Column(
             modifier = Modifier
                 .weight(1f)
@@ -215,21 +172,19 @@ fun Screen2UI(
                 .verticalScroll(rememberScrollState()),
             verticalArrangement = Arrangement.spacedBy(12.dp)
         ) {
-            // ---------- HEADER ----------
+            // HEADER
             Row(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .padding(top = 8.dp),
+                modifier = Modifier.fillMaxWidth().padding(top = 8.dp),
                 horizontalArrangement = Arrangement.SpaceBetween,
                 verticalAlignment = Alignment.CenterVertically
             ) {
                 Column {
-                    Text("Hola,", fontSize = 14.sp, color = Color.DarkGray)
+                    Text("Hola,", fontSize = 14.sp, color = MaterialTheme.colorScheme.onBackground.copy(alpha = 0.6f))
                     Text(
                         text = userEmail.substringBefore("@"),
                         fontSize = 18.sp,
                         fontWeight = FontWeight.Bold,
-                        color = Color.Black
+                        color = MaterialTheme.colorScheme.onBackground
                     )
                 }
                 IconButton(onClick = {
@@ -241,17 +196,17 @@ fun Screen2UI(
                 }) {
                     Icon(
                         imageVector = Icons.AutoMirrored.Filled.ExitToApp,
-                        contentDescription = "Cerrar Sesión",
-                        tint = Color(0xFFB83B41)
+                        contentDescription = "Logout",
+                        tint = MaterialTheme.colorScheme.primary
                     )
                 }
             }
 
-            // ---------- GPS ----------
+            // GPS CHIP
             AssistChip(
                 onClick = {},
                 shape = RoundedCornerShape(25),
-                border = BorderStroke(1.dp, Color(0xFFB83B41)),
+                border = BorderStroke(1.dp, MaterialTheme.colorScheme.primary),
                 label = {
                     Text(
                         text = when {
@@ -265,18 +220,17 @@ fun Screen2UI(
                     )
                 },
                 colors = AssistChipDefaults.assistChipColors(
-                    containerColor = Color(0xFFB83B41),
+                    containerColor = MaterialTheme.colorScheme.primary,
                     labelColor = Color.White
                 )
             )
 
-            // ---------- CÁMARA ----------
+            // CÁMARA CARD
             Card(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .height(300.dp),
+                modifier = Modifier.fillMaxWidth().height(300.dp),
                 shape = RoundedCornerShape(22.dp),
-                elevation = CardDefaults.cardElevation(2.dp)
+                elevation = CardDefaults.cardElevation(2.dp),
+                colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceVariant)
             ) {
                 if (vm.bitmap == null && vm.cameraPermissionGranted) {
                     CameraPreviewComponent(Modifier.fillMaxSize(), imageCapture)
@@ -289,34 +243,27 @@ fun Screen2UI(
                     )
                 } else {
                     Box(Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
-                        Text("Permiso de cámara requerido")
+                        Text("Permiso de cámara requerido", color = MaterialTheme.colorScheme.onSurfaceVariant)
                     }
                 }
             }
 
-            // ---------- BOTONES CÁMARA ----------
-            Row(
-                modifier = Modifier.fillMaxWidth(),
-                horizontalArrangement = Arrangement.spacedBy(12.dp)
-            ) {
+            // BOTONES CÁMARA
+            Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(12.dp)) {
                 OutlinedButton(
-                    modifier = Modifier
-                        .weight(1f)
-                        .height(46.dp),
+                    modifier = Modifier.weight(1f).height(46.dp),
                     enabled = vm.bitmap != null,
                     onClick = { vm.resetPhoto() },
                     shape = RoundedCornerShape(25),
-                    border = BorderStroke(1.dp, Color(0xFFB83B41)),
-                    colors = ButtonDefaults.outlinedButtonColors(contentColor = Color(0xFFB83B41))
+                    border = BorderStroke(1.dp, MaterialTheme.colorScheme.primary),
+                    colors = ButtonDefaults.outlinedButtonColors(contentColor = MaterialTheme.colorScheme.primary)
                 ) { Text("Repetir") }
 
                 Button(
-                    modifier = Modifier
-                        .weight(1f)
-                        .height(46.dp),
+                    modifier = Modifier.weight(1f).height(46.dp),
                     enabled = vm.bitmap == null && vm.cameraPermissionGranted,
                     shape = RoundedCornerShape(25),
-                    colors = ButtonDefaults.buttonColors(containerColor = Color(0xFFB83B41)),
+                    colors = ButtonDefaults.buttonColors(containerColor = MaterialTheme.colorScheme.primary),
                     onClick = {
                         val file = File(context.cacheDir, "photo_${System.currentTimeMillis()}.jpg")
                         imageCapture.takePicture(
@@ -326,17 +273,14 @@ fun Screen2UI(
                                 override fun onImageSaved(res: ImageCapture.OutputFileResults) {
                                     vm.bitmap = BitmapFactory.decodeFile(file.absolutePath)
                                 }
-
-                                override fun onError(e: ImageCaptureException) {
-                                    e.printStackTrace()
-                                }
+                                override fun onError(e: ImageCaptureException) { e.printStackTrace() }
                             }
                         )
                     }
-                ) { Text("Tomar foto") }
+                ) { Text("Tomar foto", color = Color.White) }
             }
 
-            // ---------- DESCRIPCIÓN ----------
+            // DESCRIPCIÓN
             OutlinedTextField(
                 value = vm.descripcion,
                 onValueChange = { vm.onDescripcionChange(it) },
@@ -346,55 +290,54 @@ fun Screen2UI(
                 shape = RoundedCornerShape(12.dp),
                 keyboardOptions = KeyboardOptions(imeAction = ImeAction.Done),
                 keyboardActions = KeyboardActions(onDone = { focusManager.clearFocus() }),
-                colors = TextFieldDefaults.colors(
-                    focusedIndicatorColor = Color(0xFFB83B41),
-                    unfocusedIndicatorColor = Color.Gray,
-                    cursorColor = Color(0xFFB83B41),
+                colors = OutlinedTextFieldDefaults.colors(
+                    focusedBorderColor = MaterialTheme.colorScheme.primary,
+                    unfocusedBorderColor = MaterialTheme.colorScheme.outline,
+                    cursorColor = MaterialTheme.colorScheme.primary,
                     focusedContainerColor = Color.Transparent,
-                    unfocusedContainerColor = Color.Transparent,
-                    focusedPlaceholderColor = Color.Gray,
-                    unfocusedPlaceholderColor = Color.Gray
+                    unfocusedContainerColor = Color.Transparent
                 )
             )
 
-            // ---------- MIC ----------
+            // MICRO
             Row(verticalAlignment = Alignment.CenterVertically) {
                 IconButton(
-                    onClick = { focusManager.clearFocus(); vibrateShort(context); startVoiceInput() },
+                    onClick = {
+                        focusManager.clearFocus()
+                        // vibrateShort(context) // Solo si tienes la función
+                        startVoiceInput()
+                    },
                     enabled = vm.audioPermissionGranted
                 ) {
                     Icon(
                         Icons.Default.Mic,
                         null,
-                        tint = if (vm.isListening) Color(0xFFB83B41) else Color.Gray
+                        tint = if (vm.isListening) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.outline
                     )
                 }
                 if (vm.isListening) {
                     Text(
                         "Escuchando...",
                         modifier = Modifier.alpha(alpha),
-                        color = Color(0xFFB83B41)
+                        color = MaterialTheme.colorScheme.primary
                     )
                 }
             }
         }
 
-        // PIE DE PÁGINA
         Spacer(modifier = Modifier.weight(0.05f))
 
         Button(
-            modifier = Modifier
-                .fillMaxWidth(0.65f)
-                .height(48.dp)
-                .align(Alignment.CenterHorizontally),
+            modifier = Modifier.fillMaxWidth(0.65f).height(48.dp).align(Alignment.CenterHorizontally),
             enabled = vm.bitmap != null && vm.descripcion.isNotBlank() && !vm.isUploading,
             shape = RoundedCornerShape(25),
-            colors = ButtonDefaults.buttonColors(containerColor = Color(0xFFB83B41)),
+            colors = ButtonDefaults.buttonColors(containerColor = MaterialTheme.colorScheme.primary),
             onClick = { vm.enviarReporte(userEmail) { } }
         ) {
             Text(
                 if (vm.isUploading) "Enviando..." else "Enviar reporte",
-                fontWeight = FontWeight.Bold
+                fontWeight = FontWeight.Bold,
+                color = Color.White
             )
         }
 

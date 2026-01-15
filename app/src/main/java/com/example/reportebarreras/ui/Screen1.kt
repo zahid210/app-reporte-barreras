@@ -8,20 +8,22 @@ import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Lock
 import androidx.compose.material.icons.filled.Person
+import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
+import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.res.painterResource
+import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.lifecycle.viewmodel.compose.viewModel
 import kotlinx.serialization.Serializable
 import com.example.reportebarreras.R
 
-// Ruta tipada para navegación
 @Serializable
 object Screen1 {
     const val ROUTE = "screen1"
@@ -35,10 +37,14 @@ fun Screen1UI(
 ) {
     val scrollState = rememberScrollState()
 
-    Box(
+    // Usamos Column como contenedor principal para aplicar el recorte del Notch
+    Column(
         modifier = modifier
             .fillMaxSize()
-            .background(Color(0xFFE6E7E8))
+            // Aplicamos el color de fondo del tema (Gris claro o Negro)
+            .background(MaterialTheme.colorScheme.background)
+            // Esto genera el efecto de "corte" en el notch al hacer scroll
+            .statusBarsPadding()
             .imePadding()
     ) {
         Column(
@@ -50,6 +56,8 @@ fun Screen1UI(
             verticalArrangement = Arrangement.Center
         ) {
             // --- 1. Logos (Bloque Superior) ---
+            Spacer(modifier = Modifier.height(40.dp))
+
             Image(
                 painter = painterResource(id = R.drawable.logo_uncp),
                 contentDescription = "logo_UNCP",
@@ -57,7 +65,7 @@ fun Screen1UI(
                 contentScale = ContentScale.Fit
             )
 
-            Spacer(modifier = Modifier.height(40.dp)) // Espacio generoso entre logos
+            Spacer(modifier = Modifier.height(40.dp))
 
             Image(
                 painter = painterResource(id = R.drawable.logo_fis),
@@ -66,11 +74,10 @@ fun Screen1UI(
                 contentScale = ContentScale.Fit
             )
 
-            // --- 2. Separador Central ---
-            // Este es el "colchón" principal entre la identidad y el formulario
             Spacer(modifier = Modifier.height(60.dp))
 
             // --- 3. Inputs (Formulario) ---
+            // Nota: Asegúrate de que BottomBorderInput use MaterialTheme.colorScheme.onBackground
             BottomBorderInput(
                 value = viewModel.user,
                 onValueChange = { viewModel.onUserChange(it) },
@@ -81,7 +88,7 @@ fun Screen1UI(
                 leadingIcon = Icons.Filled.Person
             )
 
-            Spacer(modifier = Modifier.height(25.dp)) // Espacio entre inputs
+            Spacer(modifier = Modifier.height(25.dp))
 
             BottomBorderInput(
                 value = viewModel.pass,
@@ -93,31 +100,28 @@ fun Screen1UI(
                 leadingIcon = Icons.Filled.Lock
             )
 
-            // --- 4. Bloque de Error (Seguridad Anti-Superposición) ---
-            // Usamos un padding vertical en lugar de altura fija para que el texto
-            // tenga su propio espacio vital y "empuje" suavemente si es muy largo
+            // --- 4. Bloque de Error ---
             Column(
                 modifier = Modifier
                     .fillMaxWidth()
-                    .padding(vertical = 12.dp), // Margen de seguridad arriba y abajo
+                    .padding(vertical = 12.dp),
                 horizontalAlignment = Alignment.CenterHorizontally
             ) {
                 if (viewModel.errorMessage.isNotEmpty()) {
                     Text(
                         text = viewModel.errorMessage,
-                        color = Color(0xFFB83B41),
+                        // Usamos el color primario (Rojo) definido en el tema
+                        color = MaterialTheme.colorScheme.primary,
                         fontSize = 13.sp,
-                        lineHeight = 16.sp, // Mejor lectura si el error tiene 2 líneas
-                        textAlign = androidx.compose.ui.text.style.TextAlign.Center
+                        lineHeight = 16.sp,
+                        textAlign = TextAlign.Center
                     )
                 } else {
-                    // Mantenemos un espacio invisible cuando no hay error
-                    // para que el botón no salte bruscamente al aparecer el texto
                     Spacer(modifier = Modifier.height(16.dp))
                 }
             }
 
-            // --- 5. Acciones (Botones) ---
+            // --- 5. Acciones ---
             CustomButtonWithEffect(
                 onClick = {
                     viewModel.login(onLoginSuccess = { email ->
@@ -131,18 +135,19 @@ fun Screen1UI(
             Spacer(modifier = Modifier.height(15.dp))
 
             if (!viewModel.isLoading) {
-                androidx.compose.material3.TextButton(
+                TextButton(
                     onClick = { viewModel.register() }
                 ) {
                     Text(
                         "¿No tienes cuenta? Regístrate",
-                        color = Color.Gray,
+                        // Color adaptable para el texto secundario
+                        color = MaterialTheme.colorScheme.onBackground.copy(alpha = 0.6f),
                         fontSize = 14.sp
                     )
                 }
             }
 
-            // Espacio final para evitar que el botón "Regístrate" pegue al borde
+            // Espacio final incluyendo el padding de la barra de navegación
             Spacer(modifier = Modifier.height(20.dp).navigationBarsPadding())
         }
     }
