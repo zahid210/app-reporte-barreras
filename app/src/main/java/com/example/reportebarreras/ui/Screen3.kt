@@ -40,7 +40,7 @@ fun Screen3UI(
                     Text(
                         "Mis Reportes",
                         fontWeight = FontWeight.Bold,
-                        color = MaterialTheme.colorScheme.onBackground
+                        color = MaterialTheme.colorScheme.primary
                     )
                 },
                 navigationIcon = {
@@ -48,7 +48,7 @@ fun Screen3UI(
                         Icon(
                             imageVector = Icons.AutoMirrored.Filled.ArrowBack,
                             contentDescription = "Volver",
-                            tint = MaterialTheme.colorScheme.onBackground
+                            tint = MaterialTheme.colorScheme.primary
                         )
                     }
                 },
@@ -104,7 +104,7 @@ fun Screen3UI(
                 else -> {
                     LazyColumn(
                         modifier = Modifier.fillMaxSize(),
-                        contentPadding = PaddingValues(bottom = 20.dp)
+                        contentPadding = PaddingValues(top = 8.dp, bottom = 24.dp)
                     ) {
                         items(vm.reportes) { reporte ->
                             ReporteCard(reporte = reporte)
