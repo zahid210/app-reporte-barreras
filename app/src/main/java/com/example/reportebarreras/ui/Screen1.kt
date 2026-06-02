@@ -25,7 +25,7 @@ import com.example.reportebarreras.R
 
 @Serializable
 object Screen1 {
-    const val ROUTE = "screen2"
+    const val ROUTE = "screen1"
 }
 
 @Composable
