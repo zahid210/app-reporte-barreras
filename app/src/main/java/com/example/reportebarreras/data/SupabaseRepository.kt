@@ -115,13 +115,14 @@ object SupabaseRepository {
             println("ERROR SAVE REPORTE: ${e.message}")
         }
     }
-    suspend fun getReportesByUser(email: String): List<Reporte> {
+    suspend fun getReportesByUser(email: String, limit: Int = 20, offset: Int = 0): List<Reporte> {
         return client.from("reportes")
             .select {
                 filter {
                     eq("user_email", email)
                 }
                 order("created_at", order = Order.DESCENDING)
+                range(offset.toLong(), (offset + limit - 1).toLong())
             }.decodeList<Reporte>()
     }
 }

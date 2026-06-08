@@ -6,6 +6,7 @@ import android.content.Context
 import android.content.Intent
 import android.content.IntentFilter
 import android.content.pm.PackageManager
+import android.graphics.Bitmap
 import android.graphics.BitmapFactory
 import android.location.LocationManager
 import android.os.Bundle
@@ -54,6 +55,7 @@ import kotlinx.serialization.Serializable
 import java.io.File
 import com.example.reportebarreras.data.SupabaseRepository
 import kotlinx.coroutines.launch
+import kotlin.math.min
 
 @Serializable
 object Screen2 {
@@ -77,11 +79,22 @@ fun Screen2UI(
         ImageCapture.Builder().setCaptureMode(ImageCapture.CAPTURE_MODE_MINIMIZE_LATENCY).build()
     }
 
-    val alpha by rememberInfiniteTransition(label = "mic_alpha").animateFloat(
+    val isAnimationEnabled = remember {
+        try {
+            Settings.Global.getFloat(
+                context.contentResolver,
+                Settings.Global.ANIMATOR_DURATION_SCALE,
+                1f
+            ) > 0f
+        } catch (_: Exception) { true }
+    }
+    val infiniteTransition = rememberInfiniteTransition(label = "mic_alpha")
+    val animatedAlpha by infiniteTransition.animateFloat(
         initialValue = 0.3f, targetValue = 1f,
         animationSpec = infiniteRepeatable(tween(700, easing = LinearEasing), RepeatMode.Reverse),
         label = "mic_alpha_anim"
     )
+    val alpha = if (isAnimationEnabled) animatedAlpha else 1f
 
     // --- LÓGICA DE PERMISOS ---
     val gpsSettingsLauncher = rememberLauncherForActivityResult(ActivityResultContracts.StartActivityForResult()) {
@@ -116,17 +129,25 @@ fun Screen2UI(
         onDispose { context.unregisterReceiver(receiver) }
     }
 
-    LaunchedEffect(vm.locationPermissionGranted, vm.gpsEnabled) {
+    val locationCallback = remember {
+        object : LocationCallback() {
+            override fun onLocationResult(res: LocationResult) {
+                vm.currentLocation = res.lastLocation
+            }
+        }
+    }
+
+    DisposableEffect(vm.locationPermissionGranted, vm.gpsEnabled) {
         if (vm.locationPermissionGranted && vm.gpsEnabled) {
             if (ContextCompat.checkSelfPermission(context, Manifest.permission.ACCESS_FINE_LOCATION) == PackageManager.PERMISSION_GRANTED) {
                 val request = LocationRequest.Builder(Priority.PRIORITY_HIGH_ACCURACY, 1500L).build()
-                val callback = object : LocationCallback() {
-                    override fun onLocationResult(res: LocationResult) { vm.currentLocation = res.lastLocation }
-                }
                 try {
-                    fusedLocationClient.requestLocationUpdates(request, callback, context.mainLooper)
+                    fusedLocationClient.requestLocationUpdates(request, locationCallback, context.mainLooper)
                 } catch (e: SecurityException) { e.printStackTrace() }
             }
+        }
+        onDispose {
+            fusedLocationClient.removeLocationUpdates(locationCallback)
         }
     }
 
@@ -255,15 +276,20 @@ fun Screen2UI(
                 elevation = CardDefaults.cardElevation(2.dp),
                 colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceVariant)
             ) {
-                if (vm.bitmap == null && vm.cameraPermissionGranted) {
+                if (vm.photoPath == null && vm.cameraPermissionGranted) {
                     CameraPreviewComponent(Modifier.fillMaxSize(), imageCapture)
-                } else if (vm.bitmap != null) {
-                    Image(
-                        bitmap = vm.bitmap!!.asImageBitmap(),
-                        contentDescription = null,
-                        modifier = Modifier.fillMaxSize(),
-                        contentScale = ContentScale.Crop
-                    )
+                } else if (vm.photoPath != null) {
+                    val displayBitmap = remember(vm.photoPath) {
+                        vm.photoPath?.let { decodeSampledBitmap(it, 600, 450) }
+                    }
+                    displayBitmap?.let {
+                        Image(
+                            bitmap = it.asImageBitmap(),
+                            contentDescription = "Foto capturada de la barrera",
+                            modifier = Modifier.fillMaxSize(),
+                            contentScale = ContentScale.Crop
+                        )
+                    }
                 } else {
                     Box(Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
                         Text("Permiso de cámara requerido", color = MaterialTheme.colorScheme.onSurfaceVariant)
@@ -274,8 +300,8 @@ fun Screen2UI(
             // BOTONES CÁMARA
             Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(12.dp)) {
                 OutlinedButton(
-                    modifier = Modifier.weight(1f).height(46.dp),
-                    enabled = vm.bitmap != null,
+                    modifier = Modifier.weight(1f).height(48.dp),
+                    enabled = vm.photoPath != null,
                     onClick = { vm.resetPhoto() },
                     shape = RoundedCornerShape(25),
                     border = BorderStroke(1.dp, MaterialTheme.colorScheme.primary),
@@ -283,8 +309,8 @@ fun Screen2UI(
                 ) { Text("Repetir") }
 
                 Button(
-                    modifier = Modifier.weight(1f).height(46.dp),
-                    enabled = vm.bitmap == null && vm.cameraPermissionGranted,
+                    modifier = Modifier.weight(1f).height(48.dp),
+                    enabled = vm.photoPath == null && vm.cameraPermissionGranted,
                     shape = RoundedCornerShape(25),
                     colors = ButtonDefaults.buttonColors(containerColor = MaterialTheme.colorScheme.primary),
                     onClick = {
@@ -294,7 +320,7 @@ fun Screen2UI(
                             ContextCompat.getMainExecutor(context),
                             object : ImageCapture.OnImageSavedCallback {
                                 override fun onImageSaved(res: ImageCapture.OutputFileResults) {
-                                    vm.bitmap = BitmapFactory.decodeFile(file.absolutePath)
+                                    vm.photoPath = file.absolutePath
                                 }
                                 override fun onError(e: ImageCaptureException) { e.printStackTrace() }
                             }
@@ -334,7 +360,7 @@ fun Screen2UI(
                 ) {
                     Icon(
                         Icons.Default.Mic,
-                        null,
+                        "Entrada de voz",
                         tint = if (vm.isListening) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.outline
                     )
                 }
@@ -352,7 +378,7 @@ fun Screen2UI(
 
         Button(
             modifier = Modifier.fillMaxWidth(0.65f).height(48.dp).align(Alignment.CenterHorizontally),
-            enabled = vm.bitmap != null && vm.descripcion.isNotBlank() && !vm.isUploading,
+            enabled = vm.photoPath != null && vm.descripcion.isNotBlank() && !vm.isUploading,
             shape = RoundedCornerShape(25),
             colors = ButtonDefaults.buttonColors(containerColor = MaterialTheme.colorScheme.primary),
             onClick = { vm.enviarReporte(userEmail) { } }
@@ -366,4 +392,11 @@ fun Screen2UI(
 
         Spacer(modifier = Modifier.weight(0.05f))
     }
+}
+
+private fun decodeSampledBitmap(path: String, maxWidth: Int, maxHeight: Int): Bitmap? {
+    val opts = BitmapFactory.Options().apply { inJustDecodeBounds = true }
+    BitmapFactory.decodeFile(path, opts)
+    val scale = min(opts.outWidth / maxWidth, opts.outHeight / maxHeight).coerceAtLeast(1)
+    return BitmapFactory.decodeFile(path, BitmapFactory.Options().apply { inSampleSize = scale })
 }

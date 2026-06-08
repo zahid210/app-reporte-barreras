@@ -24,6 +24,8 @@ import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.SolidColor
 import androidx.compose.ui.graphics.vector.ImageVector
+import androidx.compose.ui.semantics.contentDescription
+import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.text.input.PasswordVisualTransformation
@@ -122,7 +124,8 @@ fun BottomBorderInput(
                     end = Offset(size.width, size.height),
                     strokeWidth = stroke
                 )
-            },
+            }
+            .semantics { contentDescription = placeholder },
         decorationBox = { innerTextField ->
             Row(
                 verticalAlignment = Alignment.CenterVertically,
@@ -157,18 +160,22 @@ fun BottomBorderInput(
 
                 if (isPassword && value.isNotEmpty()) {
                     val eyeIcon = if (passwordVisible) Icons.Filled.Visibility else Icons.Filled.VisibilityOff
-                    Icon(
-                        imageVector = eyeIcon,
-                        contentDescription = "Mostrar/ocultar contraseña",
-                        tint = borderColor,
+                    Box(
                         modifier = Modifier
-                            .size(24.dp)
-                            .padding(start = 8.dp)
+                            .size(48.dp)
                             .clickable(
                                 indication = null,
                                 interactionSource = remember { MutableInteractionSource() }
-                            ) { passwordVisible = !passwordVisible }
-                    )
+                            ) { passwordVisible = !passwordVisible },
+                        contentAlignment = Alignment.Center
+                    ) {
+                        Icon(
+                            imageVector = eyeIcon,
+                            contentDescription = "Mostrar/ocultar contraseña",
+                            tint = borderColor,
+                            modifier = Modifier.size(24.dp)
+                        )
+                    }
                 }
             }
         }

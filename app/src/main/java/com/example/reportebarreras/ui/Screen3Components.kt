@@ -63,7 +63,7 @@ fun ReporteCard(reporte: Reporte) {
             // 1. IMAGEN CUADRADA (Izquierda)
             AsyncImage(
                 model = reporte.fotoUrl,
-                contentDescription = null,
+                contentDescription = "Foto del reporte",
                 modifier = Modifier
                     .size(100.dp)
                     .clip(RoundedCornerShape(12.dp))
@@ -85,7 +85,7 @@ fun ReporteCard(reporte: Reporte) {
                     Text(
                         text = fechaFormateada,
                         fontSize = 11.sp,
-                        color = Color.Gray
+                        color = MaterialTheme.colorScheme.onSurfaceVariant
                     )
 
                     // Badge de Estado
@@ -109,7 +109,7 @@ fun ReporteCard(reporte: Reporte) {
                 Text(
                     text = reporte.descripcion ?: "Sin descripción...",
                     fontSize = 13.sp,
-                    color = Color.DarkGray,
+                    color = MaterialTheme.colorScheme.onSurface,
                     maxLines = 2,
                     overflow = TextOverflow.Ellipsis
                 )
@@ -122,12 +122,12 @@ fun ReporteCard(reporte: Reporte) {
                         val intent = Intent(Intent.ACTION_VIEW, reporte.mapsUrl?.toUri())
                         context.startActivity(intent)
                     },
-                    modifier = Modifier.height(30.dp),
-                    contentPadding = PaddingValues(horizontal = 12.dp, vertical = 0.dp),
-                    colors = ButtonDefaults.buttonColors(containerColor = Color(0xFFB83B41)),
+                    modifier = Modifier.height(48.dp),
+                    contentPadding = PaddingValues(horizontal = 16.dp, vertical = 0.dp),
+                    colors = ButtonDefaults.buttonColors(containerColor = MaterialTheme.colorScheme.primary),
                     shape = RoundedCornerShape(8.dp)
                 ) {
-                    Text("Ver mapa", fontSize = 11.sp, color = Color.White)
+                    Text("Ver mapa", fontSize = 12.sp, color = Color.White)
                 }
             }
         }

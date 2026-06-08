@@ -16,6 +16,8 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.res.painterResource
+import androidx.compose.ui.semantics.contentDescription
+import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
@@ -109,7 +111,7 @@ fun Screen1UI(
                 if (viewModel.errorMessage.isNotEmpty()) {
                     Text(
                         text = viewModel.errorMessage,
-                        // Usamos el color primario (Rojo) definido en el tema
+                        modifier = Modifier.semantics { contentDescription = viewModel.errorMessage },
                         color = MaterialTheme.colorScheme.primary,
                         fontSize = 13.sp,
                         lineHeight = 16.sp,
